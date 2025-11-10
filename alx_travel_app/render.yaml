@@ -1,0 +1,46 @@
+# render.yaml
+services:
+  - type: web
+    name: alx-travel-app-web
+    env: python
+    region: frankfurt  # you can change to your nearest region (e.g., oregon, singapore)
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+    startCommand: gunicorn alx_travel_app.wsgi:application --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DEBUG
+        value: False
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alx-travel-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: alx-travel-redis
+          property: connectionString
+
+  - type: worker
+    name: alx-travel-celery-worker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A alx_travel_app worker --loglevel=info
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: alx-travel-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: alx-travel-redis
+          property: connectionString
+
+databases:
+  - name: alx-travel-db
+
+redis:
+  - name: alx-travel-redis
